@@ -124,6 +124,16 @@ as
   function get_xlsx_date (p_date_str in varchar2,
                           p_time_str in varchar2 := null) return date;
 
+  --get xlsx cells as table pipelined function
+  -- @p_form_column The leter of start column, ex B
+  -- @p_to_column The leter of start column, ex C
+  -- @p_from_line   The line to start table rows, for ignoring table headers
+  function get_xlsx_cell_values_tab (p_xlsx in blob,
+                                     p_worksheet in varchar2,
+                                     p_from_column in varchar2,
+                                     p_to_column in varchar2,
+                                     p_from_line in pls_integer)  return t_csv_tab pipelined;
+
   -- get pptx properties
   function get_pptx_properties (p_pptx in blob) return t_pptx_properties;
 
@@ -138,4 +148,3 @@ as
 
 end ooxml_util_pkg;
 /
-
