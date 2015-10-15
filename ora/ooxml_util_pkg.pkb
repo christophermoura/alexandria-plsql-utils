@@ -837,8 +837,142 @@ begin
 end get_pptx_plaintext;
 
 
+function get_xlsx_cell_values_tab (p_xlsx in blob,
+                                   p_worksheet in varchar2,
+                                   p_from_column in varchar2,
+                                   p_to_column in varchar2,
+                                   p_from_line in pls_integer)  return t_csv_tab pipelined 
+as
+  l_returnvalue                  VARCHAR2(4000);
+  l_file_name                    string_util_pkg.t_max_db_varchar2;
+  l_type                         varchar2(20);
+  l_string_index                 pls_integer;
+  l_xml                          xmltype;
+  l_shared_strings               xmltype;
+  
+  --
+  l_row                    t_csv_line := t_csv_line (null, null,  -- line number, line raw
+                                                     null, null, null, null, null, null, null, null, null, null,   -- lines 1-10
+                                                     null, null, null, null, null, null, null, null, null, null);  -- lines 11-20
+  l_row_count  pls_integer;
+  l_ascii_from_col pls_integer;
+  l_ascii_to_col pls_integer;
+  
+  
+  function get_value (p_cell in varchar2) return varchar2
+  as
+  begin
+  
+  
+    l_returnvalue := xml_util_pkg.extract_value (l_xml, '/worksheet/sheetData/row/c[@r="' || p_cell || '"]/v/text()', g_namespace_xlsx_worksheet);
+
+    l_type := xml_util_pkg.extract_value (l_xml, '/worksheet/sheetData/row/c[@r="' || p_cell || '"]/@t', g_namespace_xlsx_worksheet);
+  
+    if l_type = 's' then
+      l_string_index := to_number (l_returnvalue);
+      l_returnvalue := xml_util_pkg.extract_value (l_shared_strings, '/sst/si[' || (l_string_index + 1) || ']//t/text()', g_namespace_xlsx_sharedstrings);
+    end if;
+    
+    return l_returnvalue;
+    
+  end;
+  
+begin
+ 
+  /*
+ 
+  Purpose:      get multiple cell values from XLSX file and return with pipelined function
+ 
+  Remarks:      
+ 
+  Who     Date        Description
+  ------  ----------  --------------------------------
+  OSM    14.10.2015   Created
+ 
+  */
+   
+  
+  l_file_name := get_worksheet_file_name (p_xlsx, p_worksheet);
+
+  if l_file_name is null then
+    raise_application_error (-20000, 'Worksheet not found!');
+  end if;
+
+  l_xml := get_xml (p_xlsx, 'xl/' || l_file_name);
+
+  l_shared_strings := get_xml (p_xlsx, 'xl/sharedStrings.xml');
+  
+
+  select  xmlquery ('count($sheet/*/*:sheetData/*:row)' passing l_xml as "sheet" returning content).getstringval() cont
+  into l_row_count
+  from     dual;
+    
+  l_ascii_from_col := ascii(upper(p_from_column));
+  l_ascii_to_col := ascii(upper(p_to_column));
+  
+  for i in p_from_line.. l_row_count loop
+
+      l_row.line_number := i;
+      l_row.line_raw := null;        
+      l_row.c001 := get_value(chr(l_ascii_from_col)||i);
+      
+      for j in 1 .. 19
+      loop
+        if l_ascii_from_col + j > l_ascii_to_col
+        then
+            exit;
+        else
+            case j
+                when 1
+                then l_row.c002 := get_value(chr(l_ascii_from_col+j)||i);
+                when 2
+                then l_row.c003 := get_value(chr(l_ascii_from_col+j)||i);
+                when 3
+                then l_row.c004 := get_value(chr(l_ascii_from_col+j)||i);
+                when 4
+                then l_row.c005 := get_value(chr(l_ascii_from_col+j)||i);
+                when 5
+                then l_row.c006 := get_value(chr(l_ascii_from_col+j)||i);
+                when 6
+                then l_row.c007 := get_value(chr(l_ascii_from_col+j)||i);
+                when 7
+                then l_row.c008 := get_value(chr(l_ascii_from_col+j)||i);
+                when 8
+                then l_row.c009 := get_value(chr(l_ascii_from_col+j)||i);
+                when 10
+                then l_row.c010 := get_value(chr(l_ascii_from_col+j)||i);
+                when 11
+                then l_row.c011 := get_value(chr(l_ascii_from_col+j)||i);
+                when 12
+                then l_row.c012 := get_value(chr(l_ascii_from_col+j)||i);
+                when 13
+                then l_row.c013 := get_value(chr(l_ascii_from_col+j)||i);
+                when 14
+                then l_row.c014 := get_value(chr(l_ascii_from_col+j)||i);
+                when 15
+                then l_row.c015 := get_value(chr(l_ascii_from_col+j)||i);
+                when 16
+                then l_row.c016 := get_value(chr(l_ascii_from_col+j)||i);
+                when 17
+                then l_row.c017 := get_value(chr(l_ascii_from_col+j)||i);
+                when 18
+                then l_row.c018 := get_value(chr(l_ascii_from_col+j)||i);
+                when 19
+                then l_row.c019 := get_value(chr(l_ascii_from_col+j)||i);
+                when 20
+                then l_row.c002 := get_value(chr(l_ascii_from_col+j)||i);
+            end case;
+        end if;
+      end loop;
+     
+    pipe row (l_row);
+    
+  end loop;
+  
+  return;
+ 
+end get_xlsx_cell_values_tab;
+
+
 end ooxml_util_pkg;
 /
- 
-
-
